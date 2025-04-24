@@ -1,0 +1,9 @@
+Flask>=2.2
+python-dotenv
+numpy
+scipy
+tifffile
+imageio
+opencv-python-headless
+Pillow
+plotly

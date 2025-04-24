@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LineFRAP Single Page Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 1000px;
+            margin: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="file"] {
+            padding: 10px;
+            width: 100%;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .results {
+            margin-top: 30px;
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .plot-container {
+            margin-top: 30px;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LineFRAP Recovery Curve Analysis</h1>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <ul class="error">
+              {% for message in messages %}
+                <li>{{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Upload Image Stack (TIFF, PNG, ZIP, MP4, GIF):</label>
+                <input type="file" name="file" id="file" required>
+            </div>
+            <button type="submit">Analyze</button>
+        </form>
+
+        {% if summary %}
+        <div class="results">
+            <h3>Quantitative Results</h3>
+            <p>{{ summary|safe }}</p>
+        </div>
+        {% endif %}
+
+        {% if chart %}
+        <div class="plot-container">
+            {{ chart|safe }}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
