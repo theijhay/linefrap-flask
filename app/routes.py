@@ -4,8 +4,10 @@ import numpy as np
 from flask import Blueprint, render_template, request, flash, current_app
 from .utils import load_image_stack, extract_roi_normalize, fit_recovery_curve, plotly_chart_html
 
+"""from . import create_app"""
 main_bp = Blueprint('main', __name__)
 
+"""Set up the main blueprint for the application"""
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
     results = {}
@@ -15,7 +17,7 @@ def index():
             flash("No file selected")
             return render_template('index.html', **results)
 
-        # Validate file type by header and extension
+        """Validate file type by header and extension"""
         header = file.read(64)
         file.seek(0)
         kind = imghdr.what(None, header)
@@ -25,10 +27,11 @@ def index():
             flash("Unsupported file type")
             return render_template('index.html', **results)
 
-        # Save
+        """Save the file"""
         upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
         file.save(upload_path)
-
+        
+        """Process the file"""
         try:
             stack = load_image_stack(upload_path)
             intensities, t = extract_roi_normalize(stack)
@@ -44,6 +47,8 @@ def index():
                     f"<b>Effective radius (ρₑ):</b> {rho_e:.2f}"),
                 'chart': chart_html
             }
+            
+            """Remove the uploaded file after processing"""
         except Exception as e:
             flash(f"Error processing file: {e}")
 

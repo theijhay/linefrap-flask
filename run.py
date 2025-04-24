@@ -1,5 +1,6 @@
 from app import create_app
 
+"""The main entry point for the application"""
 app = create_app()
 
 if __name__ == '__main__':

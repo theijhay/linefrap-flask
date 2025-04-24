@@ -9,7 +9,7 @@ from PIL import Image
 from scipy.optimize import curve_fit
 import plotly.graph_objects as go
 
-
+"""The function to load the image stack"""
 def load_image_stack(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     if ext in ['.tif', '.tiff']:
@@ -43,9 +43,9 @@ def load_image_stack(file_path):
         return data[None, ...]
     return data
 
-
+"""The function to extract the ROI and normalize the data"""
 def extract_roi_normalize(stack, half_width=5):
-    # Central horizontal ROI and mean intensities
+    """Central horizontal ROI and mean intensities"""
     y = stack.shape[1] // 2
     roi = stack[:, y-half_width:y+half_width, :]
     intensities = np.array([np.mean(frame) for frame in roi])
@@ -53,14 +53,14 @@ def extract_roi_normalize(stack, half_width=5):
     if len(intensities) < 4:
         raise ValueError("Upload must contain at least 4 frames.")
 
-    # Normalize I(t)/I0 (LineFRAP convention)
+    """Normalize I(t)/I0 (LineFRAP convention)"""
     I_bleach = intensities[3]
     I_pre = intensities[:3].mean()
     norm = (intensities - I_bleach) / (I_pre - I_bleach)
     t = np.arange(norm.size)
     return norm, t
 
-
+"""The analytical model for the recovery curve"""
 def analytical_model(t, k, K0, D, rho_e):
     # vectorized model
     TI = sum(((-K0)**j) / (math.factorial(j) * np.sqrt(1 + j)) for j in range(4))
@@ -70,7 +70,7 @@ def analytical_model(t, k, K0, D, rho_e):
     TD = terms.sum(axis=0)
     return k * TD + (1 - k) * TI
 
-
+"""The function to fit the recovery curve"""
 def fit_recovery_curve(norm, t):
     def fit_func(t, k, K0, D, rho_e):
         return 1 - analytical_model(t, k, K0, D, rho_e)
@@ -78,7 +78,7 @@ def fit_recovery_curve(norm, t):
     popt, _ = curve_fit(fit_func, t, norm, p0=[0.8, 0.5, 10, 0.5], bounds=(0, np.inf))
     return popt
 
-
+"""The function to create the Plotly chart"""
 def plotly_chart_html(norm, t, popt):
     default_curve = 1 - analytical_model(t, 0.8, 0.5, 10, 0.5)
     fit = 1 - analytical_model(t, *popt)
