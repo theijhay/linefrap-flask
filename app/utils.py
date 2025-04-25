@@ -8,8 +8,10 @@ import cv2
 from PIL import Image
 from scipy.optimize import curve_fit
 import plotly.graph_objects as go
+from sklearn.metrics import r2_score
 
-"""The function to load the image stack"""
+""" This module contains utility functions for loading image stacks, extracting regions of interest (ROIs)
+normalizing data, fitting recovery curves, and generating Plotly charts."""
 def load_image_stack(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     if ext in ['.tif', '.tiff']:
@@ -43,26 +45,22 @@ def load_image_stack(file_path):
         return data[None, ...]
     return data
 
-"""The function to extract the ROI and normalize the data"""
+""" Load an image stack from a file and return it as a 3D numpy array."""
 def extract_roi_normalize(stack, half_width=5):
-    """Central horizontal ROI and mean intensities"""
     y = stack.shape[1] // 2
     roi = stack[:, y-half_width:y+half_width, :]
     intensities = np.array([np.mean(frame) for frame in roi])
-
     if len(intensities) < 4:
         raise ValueError("Upload must contain at least 4 frames.")
-
-    """Normalize I(t)/I0 (LineFRAP convention)"""
     I_bleach = intensities[3]
     I_pre = intensities[:3].mean()
     norm = (intensities - I_bleach) / (I_pre - I_bleach)
     t = np.arange(norm.size)
     return norm, t
 
-"""The analytical model for the recovery curve"""
+""" Extract a region of interest (ROI) from the image stack,
+normalize the intensity values, and return the normalized data and time points."""
 def analytical_model(t, k, K0, D, rho_e):
-    # vectorized model
     TI = sum(((-K0)**j) / (math.factorial(j) * np.sqrt(1 + j)) for j in range(4))
     j = np.arange(4)[:, None]
     denom = np.sqrt((1+j)*(1 + (8*D)/(rho_e**2)*t))
@@ -70,21 +68,31 @@ def analytical_model(t, k, K0, D, rho_e):
     TD = terms.sum(axis=0)
     return k * TD + (1 - k) * TI
 
-"""The function to fit the recovery curve"""
+""" Fit the analytical model to the normalized data using curve fitting."""
 def fit_recovery_curve(norm, t):
     def fit_func(t, k, K0, D, rho_e):
         return 1 - analytical_model(t, k, K0, D, rho_e)
-
     popt, _ = curve_fit(fit_func, t, norm, p0=[0.8, 0.5, 10, 0.5], bounds=(0, np.inf))
-    return popt
+    fitted = fit_func(t, *popt)
+    r_squared = r2_score(norm, fitted)
+    return popt, fitted, r_squared
 
-"""The function to create the Plotly chart"""
-def plotly_chart_html(norm, t, popt):
+""" Fit the recovery curve using the analytical model and return the optimal parameters,"""
+def plotly_chart_html(norm, t, popt, r_squared=None):
     default_curve = 1 - analytical_model(t, 0.8, 0.5, 10, 0.5)
     fit = 1 - analytical_model(t, *popt)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=t, y=norm, mode='markers+lines', name='Normalized Data', marker=dict(size=6), line=dict(dash='dot')))
     fig.add_trace(go.Scatter(x=t, y=fit, mode='lines', name='Fitted Curve', line=dict(width=3)))
-    fig.add_trace(go.Scatter(x=t, y=default_curve, mode='lines', name='Model Default', line=dict(dash='dash')))  
-    fig.update_layout(title="LineFRAP Recovery Curve", xaxis_title="Time (frames)", yaxis_title="I(t)/I₀", template='plotly_white', height=500, width=800)
+    fig.add_trace(go.Scatter(x=t, y=default_curve, mode='lines', name='Model Default', line=dict(dash='dash')))
+    fig.update_layout(
+        title=f"LineFRAP Recovery Curve{' - R²: {:.4f}'.format(r_squared) if r_squared is not None else ''}",
+        xaxis_title="Time (frames)",
+        yaxis_title="I(t)/I₀",
+        template='plotly_white',
+        height=500,
+        width=800
+    )
+    
+    """ Customize the layout of the Plotly figure to improve aesthetics."""
     return go.Figure(fig).to_html(include_plotlyjs='cdn', full_html=False)

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>LineFRAP Single Page Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -57,39 +58,46 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>LineFRAP Recovery Curve Analysis</h1>
+<div class="container">
+    <h1>LineFRAP Recovery Curve Analysis</h1>
 
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            <ul class="error">
-              {% for message in messages %}
-                <li>{{ message }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        {% endwith %}
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class="error">
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
 
-        <form method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="file">Upload Image Stack (TIFF, PNG, ZIP, MP4, GIF):</label>
-                <input type="file" name="file" id="file" required>
-            </div>
-            <button type="submit">Analyze</button>
-        </form>
-
-        {% if summary %}
-        <div class="results">
-            <h3>Quantitative Results</h3>
-            <p>{{ summary|safe }}</p>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="file">Upload Image Stack (TIFF, PNG, ZIP, MP4, GIF):</label>
+            <input type="file" name="file" id="file" required>
         </div>
-        {% endif %}
+        <button type="submit">Analyze</button>
+    </form>
 
-        {% if chart %}
-        <div class="plot-container">
-            {{ chart|safe }}
-        </div>
-        {% endif %}
+    {% if summary %}
+    <div class="results">
+        <h3>Quantitative Results</h3>
+        <p>{{ summary|safe }}</p>
     </div>
+    {% endif %}
+
+    {% if chart %}
+    <div class="plot-container">
+        {{ chart|safe }}
+        <p><strong>Recovery Model Equation:</strong></p>
+        <p>
+        $$
+        I(t) = k \cdot \sum\limits_{j=0}^3 \frac{(-K_0)^j}{j! \sqrt{(1+j)(1+\frac{8Dt}{\rho_e^2})}} + (1-k) \cdot \sum\limits_{j=0}^3 \frac{(-K_0)^j}{j! \sqrt{1+j}}
+        $$
+        </p>
+        <button onclick="Plotly.downloadImage(document.querySelector('.js-plotly-plot'), {format: 'png'})">Download Plot as PNG</button>
+    </div>
+    {% endif %}
+</div>
 </body>
 </html>
