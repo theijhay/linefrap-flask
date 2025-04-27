@@ -1,4 +1,4 @@
-Flask>=2.2
+Flask
 python-dotenv
 numpy
 scipy
@@ -7,3 +7,7 @@ imageio
 opencv-python-headless
 Pillow
 plotly
+gunicorn
+opencv-python
+pillow
+scikit-learn
