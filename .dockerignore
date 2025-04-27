@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+uploads/
+frap_demo_frames/
+frap_demo.zip
+frap_demo.mp4
+frap_demo.tiff
+frap_demo.gif
+node_modules/
