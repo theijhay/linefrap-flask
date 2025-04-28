@@ -12,4 +12,3 @@ opencv-python
 pillow
 scikit-learn
 watchdog
-imghdr

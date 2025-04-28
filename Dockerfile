@@ -1,29 +1,28 @@
-# official lightweight Python image
-FROM python:3.12-slim
+# Build dependencies separately
+FROM python:3.10-slim AS builder
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+WORKDIR /install
 
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libgl1-mesa-glx \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
+# Install pip dependencies first
 COPY requirements.txt .
 RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN pip install --prefix=/install/packages -r requirements.txt
 
-# Copy project
+# Final runtime image
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy installed Python packages
+COPY --from=builder /install/packages /usr/local
+
+# Copy only app code (small)
 COPY . .
 
-# Expose port
+ENV PYTHONPATH=/usr/local:$PYTHONPATH
+ENV FLASK_ENV=production
+ENV UPLOAD_FOLDER=/app/uploads
+
 EXPOSE 5000
 
-# Run Gunicorn (production WSGI server)
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app"]

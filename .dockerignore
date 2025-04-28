@@ -9,4 +9,7 @@ frap_demo.zip
 frap_demo.mp4
 frap_demo.tiff
 frap_demo.gif
+frap_demo.*
 node_modules/
+__pycache__/
+
