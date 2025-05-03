@@ -30,10 +30,13 @@ def index():
 
         try:
             stack = load_image_stack(upload_path)
+            if stack.ndim < 3 or stack.shape[0] <= 1:
+                flash("⚠️ Only one frame was detected. A proper FRAP analysis requires multiple time-lapse frames. "
+                "Please check that you've uploaded the correct time-series file.")
+                
             intensities, t = extract_roi_normalize(stack)
             popt, fitted, r2 = fit_recovery_curve(intensities, t)
             chart_html = plotly_chart_html(intensities, t, popt)
-            print("Chart HTML Length:", len(chart_html))
 
             k, K0, D, rho_e = popt
             results = {
