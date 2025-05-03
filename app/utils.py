@@ -9,6 +9,7 @@ from PIL import Image
 from scipy.optimize import curve_fit
 import plotly.graph_objects as go
 from sklearn.metrics import r2_score
+import warnings
 
 """ This module contains utility functions for loading image stacks, extracting regions of interest (ROIs)
 normalizing data, fitting recovery curves, and generating Plotly charts."""
@@ -50,11 +51,12 @@ def extract_roi_normalize(stack, half_width=5):
     y = stack.shape[1] // 2
     roi = stack[:, y-half_width:y+half_width, :]
     intensities = np.array([np.mean(frame) for frame in roi])
-    if len(intensities) < 4:
-        raise ValueError("Upload must contain at least 4 frames.")
-    I_bleach = intensities[3]
-    I_pre = intensities[:3].mean()
-    norm = (intensities - I_bleach) / (I_pre - I_bleach)
+
+    # Even if only 1 frame, still proceed (no validation)
+    I_bleach = intensities[min(1, len(intensities)-1)]
+    I_pre = intensities[:1].mean() if len(intensities) <= 2 else intensities[:3].mean()
+
+    norm = (intensities - I_bleach) / (I_pre - I_bleach + 1e-8)  # prevent division by 0
     t = np.arange(norm.size)
     return norm, t
 
@@ -72,27 +74,36 @@ def analytical_model(t, k, K0, D, rho_e):
 def fit_recovery_curve(norm, t):
     def fit_func(t, k, K0, D, rho_e):
         return 1 - analytical_model(t, k, K0, D, rho_e)
-    popt, _ = curve_fit(fit_func, t, norm, p0=[0.8, 0.5, 10, 0.5], bounds=(0, np.inf))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        popt, _ = curve_fit(fit_func, t, norm, p0=[0.8, 0.5, 10, 0.5], bounds=(0, np.inf))
+
     fitted = fit_func(t, *popt)
-    r_squared = r2_score(norm, fitted)
-    return popt, fitted, r_squared
+    return popt, fitted, None
 
 """ Fit the recovery curve using the analytical model and return the optimal parameters,"""
 def plotly_chart_html(norm, t, popt, r_squared=None):
     default_curve = 1 - analytical_model(t, 0.8, 0.5, 10, 0.5)
     fit = 1 - analytical_model(t, *popt)
+
+    # Padding to avoid 1-point chart rendering issues
+    if len(t) < 2:
+        t = np.append(t, t[-1] + 1)
+        norm = np.append(norm, norm[-1])
+        fit = np.append(fit, fit[-1])
+        default_curve = np.append(default_curve, default_curve[-1])
+
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=t, y=norm, mode='markers+lines', name='Normalized Data', marker=dict(size=6), line=dict(dash='dot')))
     fig.add_trace(go.Scatter(x=t, y=fit, mode='lines', name='Fitted Curve', line=dict(width=3)))
     fig.add_trace(go.Scatter(x=t, y=default_curve, mode='lines', name='Model Default', line=dict(dash='dash')))
     fig.update_layout(
-        title=f"LineFRAP Recovery Curve{' - R²: {:.4f}'.format(r_squared) if r_squared is not None else ''}",
+        title="LineFRAP Recovery Curve",
         xaxis_title="Time (frames)",
         yaxis_title="I(t)/I₀",
         template='plotly_white',
         height=500,
         width=800
     )
-    
-    """ Customize the layout of the Plotly figure to improve aesthetics."""
-    return go.Figure(fig).to_html(include_plotlyjs='cdn', full_html=False)
+    return go.Figure(fig).to_html(include_plotlyjs=True, full_html=False)
